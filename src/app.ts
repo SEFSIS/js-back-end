@@ -6,36 +6,6 @@ import { configs } from "./configs/config";
 import { User } from "./models/User";
 import { IUser } from "./types/user.type";
 
-const users = [
-  {
-    name: "Oleg",
-
-    age: 20,
-
-    gender: "male",
-  },
-  {
-    name: "Anton",
-    age: 10,
-    gender: "male",
-  },
-  {
-    name: "Inokentiy",
-    age: 25,
-    gender: "female",
-  },
-  {
-    name: "Anastasiya",
-    age: 15,
-    gender: "female",
-  },
-  {
-    name: "Cocos",
-    age: 25,
-    gender: "other",
-  },
-];
-
 const app = express(); // викликаємо express, як функцію
 
 app.use(express.json());
@@ -48,7 +18,7 @@ app.get(
   "/users",
   async (req: Request, res: Response): Promise<Response<IUser[]>> => {
     try {
-      const users = await User.find();
+      const users = await User.find().select("-password");
       //const users = await User.find({ gender: Genders.male });
 
       return res.json(users);
@@ -58,11 +28,18 @@ app.get(
   },
 );
 
-app.get("/users/:id", (req: Request, res: Response) => {
-  const { id } = req.params;
-  console.log(id);
-  res.status(200).json(users[+id]);
-});
+app.get(
+  "/users/:id",
+  async (req: Request, res: Response): Promise<Response<IUser>> => {
+    try {
+      const user = await User.findById(req.params.id);
+
+      return res.json(user);
+    } catch (e) {
+      console.log(e);
+    }
+  },
+);
 
 app.listen(configs.PORT, () => {
   // listen запускає нашу аплікацію
@@ -84,25 +61,38 @@ app.post(
   },
 );
 
-app.put("/users/:id", (req: Request, res: Response) => {
-  //оновлюємо користувача
-  const { id } = req.params;
+app.put(
+  "/users/:id",
+  async (req: Request, res: Response): Promise<Response<IUser>> => {
+    //оновлюємо користувача
+    try {
+      const { id } = req.params;
 
-  users[+id] = req.body;
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: id },
+        { ...req.body },
+        { returnDocument: "after" },
+      );
 
-  res.status(200).json({
-    message: "User updated",
-    data: users[+id],
-  });
-});
+      return res.status(200).json(updatedUser);
+    } catch (e) {
+      console.log(e);
+    }
+  },
+);
 
-app.delete("/users/:id", (req: Request, res: Response) => {
-  //видаляємо користувача
-  const { id } = req.params;
+app.delete(
+  "/users/:id",
+  async (req: Request, res: Response): Promise<Response<void>> => {
+    //видаляємо користувача
+    try {
+      const { id } = req.params;
 
-  users.splice(+id, 1);
+      await User.deleteOne({ _id: id });
 
-  res.status(200).json({
-    message: "User deleted",
-  });
-});
+      return res.sendStatus(200);
+    } catch (e) {
+      console.log(e);
+    }
+  },
+);

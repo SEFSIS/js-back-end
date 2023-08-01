@@ -30,49 +30,26 @@ const express_1 = __importDefault(require("express"));
 const mongoose = __importStar(require("mongoose"));
 const config_1 = require("./configs/config");
 const User_1 = require("./models/User");
-const users = [
-    {
-        name: "Oleg",
-        age: 20,
-        gender: "male",
-    },
-    {
-        name: "Anton",
-        age: 10,
-        gender: "male",
-    },
-    {
-        name: "Inokentiy",
-        age: 25,
-        gender: "female",
-    },
-    {
-        name: "Anastasiya",
-        age: 15,
-        gender: "female",
-    },
-    {
-        name: "Cocos",
-        age: 25,
-        gender: "other",
-    },
-];
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.get("/users", async (req, res) => {
     try {
-        const users = await User_1.User.find();
+        const users = await User_1.User.find().select("-password");
         return res.json(users);
     }
     catch (e) {
         console.log(e);
     }
 });
-app.get("/users/:id", (req, res) => {
-    const { id } = req.params;
-    console.log(id);
-    res.status(200).json(users[+id]);
+app.get("/users/:id", async (req, res) => {
+    try {
+        const user = await User_1.User.findById(req.params.id);
+        return res.json(user);
+    }
+    catch (e) {
+        console.log(e);
+    }
 });
 app.listen(config_1.configs.PORT, () => {
     mongoose.connect(config_1.configs.DB_URL);
@@ -87,18 +64,23 @@ app.post("/users", async (req, res) => {
         console.log(e);
     }
 });
-app.put("/users/:id", (req, res) => {
-    const { id } = req.params;
-    users[+id] = req.body;
-    res.status(200).json({
-        message: "User updated",
-        data: users[+id],
-    });
+app.put("/users/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedUser = await User_1.User.findOneAndUpdate({ _id: id }, { ...req.body }, { returnDocument: "after" });
+        return res.status(200).json(updatedUser);
+    }
+    catch (e) {
+        console.log(e);
+    }
 });
-app.delete("/users/:id", (req, res) => {
-    const { id } = req.params;
-    users.splice(+id, 1);
-    res.status(200).json({
-        message: "User deleted",
-    });
+app.delete("/users/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        await User_1.User.deleteOne({ _id: id });
+        return res.sendStatus(200);
+    }
+    catch (e) {
+        console.log(e);
+    }
 });
