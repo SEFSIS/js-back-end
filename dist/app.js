@@ -29,7 +29,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const mongoose = __importStar(require("mongoose"));
 const config_1 = require("./configs/config");
+const errors_1 = require("./errors");
 const User_1 = require("./models/User");
+const validators_1 = require("./validators");
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
@@ -51,27 +53,31 @@ app.get("/users/:id", async (req, res) => {
         console.log(e);
     }
 });
-app.listen(config_1.configs.PORT, () => {
-    mongoose.connect(config_1.configs.DB_URL);
-    console.log(`Server has started on PORT ${config_1.configs.PORT}`);
-});
-app.post("/users", async (req, res) => {
+app.post("/users", async (req, res, next) => {
     try {
-        const createdUser = await User_1.User.create(req.body);
+        const { error, value } = validators_1.UserValidator.create.validate(req.body);
+        if (error) {
+            throw new errors_1.ApiError(error.message, 400);
+        }
+        const createdUser = await User_1.User.create(value);
         return res.status(201).json(createdUser);
     }
     catch (e) {
-        console.log(e);
+        next(e);
     }
 });
-app.put("/users/:id", async (req, res) => {
+app.put("/users/:id", async (req, res, next) => {
     try {
         const { id } = req.params;
-        const updatedUser = await User_1.User.findOneAndUpdate({ _id: id }, { ...req.body }, { returnDocument: "after" });
+        const { error, value } = validators_1.UserValidator.update.validate(req.body);
+        if (error) {
+            throw new errors_1.ApiError(error.message, 400);
+        }
+        const updatedUser = await User_1.User.findOneAndUpdate({ _id: id }, { ...value }, { returnDocument: "after" });
         return res.status(200).json(updatedUser);
     }
     catch (e) {
-        console.log(e);
+        next(e);
     }
 });
 app.delete("/users/:id", async (req, res) => {
@@ -83,4 +89,12 @@ app.delete("/users/:id", async (req, res) => {
     catch (e) {
         console.log(e);
     }
+});
+app.use((error, req, res, next) => {
+    const status = error.status || 500;
+    return res.status(status).json(error.message);
+});
+app.listen(config_1.configs.PORT, () => {
+    mongoose.connect(config_1.configs.DB_URL);
+    console.log(`Server has started on PORT ${config_1.configs.PORT}`);
 });
