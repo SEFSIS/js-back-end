@@ -7,7 +7,7 @@ class UserMiddleware {
   public isCreateValid(req: Request, res: Response, next: NextFunction) {
     try {
       const { error, value } = UserValidator.create.validate(req.body);
-      if (error) {
+      if (error)     {
         throw new ApiError(error.message, 400);
       }
 
