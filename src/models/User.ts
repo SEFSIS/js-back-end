@@ -25,11 +25,12 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true,
+      select: false,
     },
   },
   {
     versionKey: false,
     timestamps: true,
-  },
+  }
 );
 export const User = model("user", userSchema);

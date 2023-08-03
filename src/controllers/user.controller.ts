@@ -1,16 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 
-import { ApiError } from "../errors";
-import { User } from "../models/User";
 import { userService } from "../services/user.service";
 import { IUser } from "../types/user.type";
-import { UserValidator } from "../validators";
 
 class UserController {
   public async findAll(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<Response<IUser[]>> {
     try {
       const users = await userService.findAll();
@@ -24,11 +21,11 @@ class UserController {
   public async create(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<Response<IUser>> {
     //стоворюємо нового користувача
     try {
-      const createdUser = await userService.create(req.res.locals as IUser);
+      const createdUser = await userService.create(req.body);
 
       return res.status(201).json(createdUser);
     } catch (e) {
@@ -38,10 +35,11 @@ class UserController {
   public async findById(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<Response<IUser>> {
     try {
-      const user = await userService.findById(req.params.id);
+      const { userId } = req.params;
+      const user = await userService.findById(userId);
 
       return res.json(user);
     } catch (e) {
@@ -52,21 +50,13 @@ class UserController {
   public async updateById(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<Response<IUser>> {
     //оновлюємо користувача
     try {
-      const { id } = req.params;
-      const { error, value } = UserValidator.update.validate(req.body);
-      if (error) {
-        throw new ApiError(error.message, 400);
-      }
+      const { userId } = req.params;
 
-      const updatedUser = await User.findOneAndUpdate(
-        { _id: id },
-        { ...value },
-        { returnDocument: "after" },
-      );
+      const updatedUser = await userService.updateById(userId, req.body);
 
       return res.status(200).json(updatedUser);
     } catch (e) {
@@ -76,15 +66,14 @@ class UserController {
   public async deleteById(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<Response<void>> {
     //видаляємо користувача
     try {
-      const { id } = req.params;
+      const { userId } = req.params;
+      await userService.deleteById(userId);
 
-      await User.deleteOne({ _id: id });
-
-      return res.sendStatus(200);
+      return res.sendStatus(204);
     } catch (e) {
       next(e);
     }
