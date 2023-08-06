@@ -18,7 +18,6 @@ class AuthService {
     }
     async login(credentials, user) {
         try {
-            user = await User_1.User.findOne({ email: credentials.email });
             const isMatched = await password_service_1.passwordService.compare(credentials.password, user.password);
             if (!isMatched) {
                 throw new errors_1.ApiError("Invalid email or password", 401);
