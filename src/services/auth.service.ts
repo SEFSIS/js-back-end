@@ -22,8 +22,6 @@ class AuthService {
     user: IUser
   ): Promise<ITokensPair> {
     try {
-      //TODO: remove,settle inside of the middleware
-      user = await User.findOne({ email: credentials.email });
       const isMatched = await passwordService.compare(
         credentials.password,
         user.password
