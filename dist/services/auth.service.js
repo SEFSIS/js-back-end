@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authService = void 0;
+const action_token_type_enum_1 = require("../enums/action-token-type.enum");
 const email_enum_1 = require("../enums/email.enum");
 const errors_1 = require("../errors");
+const Action_model_1 = require("../models/Action.model");
 const OldPassword_model_1 = require("../models/OldPassword.model");
 const Token_model_1 = require("../models/Token.model");
 const User_1 = require("../models/User");
@@ -73,6 +75,36 @@ class AuthService {
             await Promise.all([
                 OldPassword_model_1.OldPassword.create({ password: user.password, _userId: userId }),
                 await User_1.User.updateOne({ _id: userId }, { password: newHash }),
+            ]);
+        }
+        catch (e) {
+            throw new errors_1.ApiError(e.message, e.status);
+        }
+    }
+    async forgotPassword(userId, email) {
+        try {
+            const actionToken = token_service_1.tokenService.generateActionToken({ _id: userId }, action_token_type_enum_1.EActionTokenType.Forgot);
+            await Promise.all([
+                await Action_model_1.Action.create({
+                    actionToken,
+                    tokenType: action_token_type_enum_1.EActionTokenType.Forgot,
+                    _userId: userId,
+                }),
+                await email_service_1.emailService.sendMail(email, email_enum_1.EEmailActions.FORGOT_PASSWORD, {
+                    actionToken,
+                }),
+            ]);
+        }
+        catch (e) {
+            throw new errors_1.ApiError(e.message, e.status);
+        }
+    }
+    async setForgotPassword(password, userId, actionToken) {
+        try {
+            const hashedPassword = await password_service_1.passwordService.hash(password);
+            await Promise.all([
+                User_1.User.updateOne({ _id: userId }, { password: hashedPassword }),
+                Action_model_1.Action.deleteOne({ actionToken }),
             ]);
         }
         catch (e) {
