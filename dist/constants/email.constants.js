@@ -7,4 +7,8 @@ exports.allTemplates = {
         templateName: "register",
         subject: "Welcome to our powerful CRUD platform",
     },
+    [email_enum_1.EEmailActions.FORGOT_PASSWORD]: {
+        templateName: "forgot-password",
+        subject: "WE CONTROL YOUR PASSWORD",
+    },
 };
