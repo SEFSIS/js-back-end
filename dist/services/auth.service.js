@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.authService = void 0;
 const action_token_type_enum_1 = require("../enums/action-token-type.enum");
 const email_enum_1 = require("../enums/email.enum");
+const user_status_enum_1 = require("../enums/user-status.enum");
 const errors_1 = require("../errors");
 const Action_model_1 = require("../models/Action.model");
 const OldPassword_model_1 = require("../models/OldPassword.model");
@@ -15,10 +16,19 @@ class AuthService {
     async register(data) {
         try {
             const hashedPassword = await password_service_1.passwordService.hash(data.password);
-            await User_1.User.create({ ...data, password: hashedPassword });
-            await email_service_1.emailService.sendMail(data.email, email_enum_1.EEmailActions.WELCOME, {
-                name: data.name,
-            });
+            const user = await User_1.User.create({ ...data, password: hashedPassword });
+            const actionToken = token_service_1.tokenService.generateActionToken({ _id: user._id }, action_token_type_enum_1.EActionTokenType.Activate);
+            await Promise.all([
+                Action_model_1.Action.create({
+                    actionToken,
+                    tokenType: action_token_type_enum_1.EActionTokenType.Activate,
+                    _userId: user._id,
+                }),
+                await email_service_1.emailService.sendMail(data.email, email_enum_1.EEmailActions.WELCOME, {
+                    name: data.name,
+                    actionToken,
+                }),
+            ]);
         }
         catch (e) {
             throw new errors_1.ApiError(e.message, e.status);
@@ -105,6 +115,20 @@ class AuthService {
             await Promise.all([
                 User_1.User.updateOne({ _id: userId }, { password: hashedPassword }),
                 Action_model_1.Action.deleteOne({ actionToken }),
+            ]);
+        }
+        catch (e) {
+            throw new errors_1.ApiError(e.message, e.status);
+        }
+    }
+    async activate(jwtPayload) {
+        try {
+            await Promise.all([
+                User_1.User.updateOne({ _id: jwtPayload._id }, { status: user_status_enum_1.EUserStatus.Active }),
+                Action_model_1.Action.deleteMany({
+                    _userId: jwtPayload._id,
+                    tokenType: action_token_type_enum_1.EActionTokenType.Activate,
+                }),
             ]);
         }
         catch (e) {
